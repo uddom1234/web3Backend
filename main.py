@@ -289,34 +289,28 @@ async def view_transaction(buyer_id: int):
         contract_instance = w3.eth.contract(address=contract_address, abi=contract_abi)
 
         # Define an event filter
-        event_filter = contract_instance.events.PurchaseAdded.create_filter(fromBlock=0)  # Adjust the block number accordingly
+        event_filter = contract_instance.events.PurchaseAdded.create_filter(fromBlock=0)
 
         # Fetch all entries from the event log
         event_logs = event_filter.get_all_entries()
-        print(event_logs)
+
         # Iterate through the event logs and extract purchase information
         for event in event_logs:
-            purchase = {
-                "contract_address": contract_address,
-                "purchaseId": event['args']['purchaseId'],
-                "itemName": event['args']['itemName'],
-                "itemPrice": event['args']['itemPrice'],
-                "purchaseTime": event['args']['purchaseTime']
-            }
-            all_purchases.append(purchase)
-
-            purchase_id = purchase['purchaseId'] 
-            # Assuming my_address is globally defined or retrieved somehow
-            user_name, user_email = contract_instance.functions.getUser(my_address).call()  # Using the last contract_instance for this
-
+            purchase_id = event['args']['purchaseId'] 
+            user_name, user_email = contract_instance.functions.getUser(my_address).call()
             item_name, item_price, purchase_time = contract_instance.functions.getPurchase(my_address, purchase_id).call()
 
-
-            print("User name: ", user_name)
-            print("User email: ", user_email)
-            print("Item name: ", item_name)
-            print("Item price: ", item_price)
-            print("Purchase time: ", purchase_time)
+            purchase = {
+                "contract_address": contract_address,
+                "purchaseId": purchase_id,
+                "itemName": item_name,
+                "itemPrice": item_price,
+                "purchaseTime": purchase_time,
+                "userName": user_name,
+                "userEmail": user_email
+            }
+            
+            all_purchases.append(purchase)
 
     # Close cursor and connection
     cursor.close()
