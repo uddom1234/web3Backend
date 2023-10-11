@@ -10,7 +10,7 @@ origins = ["*"]
 db_config = {
     "host": "localhost",
     "user": "root",
-    "password": "jkiller8",
+    "password": "111111a",
     "database": "DecentralizedTradingSystem"
 }
 
@@ -73,12 +73,16 @@ async def add_asset(request: Request):
     price = data['price']
     category_id = data['category_id']
     owner_id = data['owner_id']
+    staked = data['staked']
+    rewards = data['rewards']
+    balance = data['balance']
+    image = data['image']
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     cursor.execute(
-        "INSERT INTO DigitalAssets (AssetName, Description, Price, CategoryID, OwnerID) VALUES (%s, %s, %s, %s, %s);",
-        (asset_name, description, price, category_id, owner_id)
+        "INSERT INTO DigitalAssets (AssetName, Description, Price, CategoryID, OwnerID, Staked, Rewards, Balance, Image) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);",
+        (asset_name, description, price, category_id, owner_id, staked, rewards, balance, image)
     )
     connection.commit()
     cursor.close()
@@ -104,12 +108,17 @@ async def update_asset(request: Request, asset_id: int):
     asset_name = data['asset_name']
     description = data['description']
     price = data['price']
+    staked = data['staked']
+    rewards = data['rewards']
+    balance = data['balance']
+    image = data['image']
+
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     cursor.execute(
-        "UPDATE DigitalAssets SET AssetName = %s, Description = %s, Price = %s WHERE AssetID = %s;",
-        (asset_name, description, price, asset_id)
+        "UPDATE DigitalAssets SET AssetName = %s, Description = %s, Price = %s, Staked = %s, Rewards = %s, Balance = %s, Image = %s WHERE AssetID = %s;",
+        (asset_name, description, price, staked, rewards, balance, image, asset_id)
     )
     connection.commit()
     cursor.close()
