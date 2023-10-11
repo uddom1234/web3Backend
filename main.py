@@ -14,7 +14,7 @@ origins = ["*"]
 db_config = {
     "host": "localhost",
     "user": "root",
-    "password": "jkiller8",
+    "password": "Mh@010611660067",
     "database": "DecentralizedTradingSystem"
 }
 
@@ -33,9 +33,9 @@ w3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
 chain_id = 1337
 
 # Find in you account
-my_address = "0x80f94dd6bE84eA620d5Ac9688fF824EF8602F832"
+my_address = "0x3439D770ba2EE1dA776262334B3Ef102881D5DD9"
 # Find in you account
-private_key = "0x25fa3c71a9dfd70575b331040087faf345acfdc2ff2ab4a1eae17af37ad70160"
+private_key = "0xd3b60b7e3c4ae3fec55cb0d91a7772537fddef9e4203a7bf427c7dadccb7e3c0"
 
 # Compile and deploy contract
 with open("./PurchaseContract.sol", "r") as file:
@@ -87,21 +87,21 @@ async def register_user(request: Request):
 @app.post("/login/")
 async def login(request: Request):
     data = await request.json()
-    username = data['username']
+    email = data['email']
     password = data['password']
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     cursor.execute(
-        "SELECT * FROM Users WHERE Username = %s AND Password = %s;",
-        (username, password)
+        "SELECT * FROM Users WHERE email = %s AND Password = %s;",
+        (email, password)
     )
     user = cursor.fetchone()
     cursor.close()
     connection.close()
 
     if user:
-        return {"message": "Login successful", "success": true}
+        return {"message": "Login successful", "success": True}
     else:
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
