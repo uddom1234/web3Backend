@@ -33,9 +33,9 @@ w3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
 chain_id = 1337
 
 # Find in you account
-my_address = "0x80f94dd6bE84eA620d5Ac9688fF824EF8602F832"
+my_address = "0x2aC3a79dc3Bf4Ff10FD3506c97948Be3396f6dE7"
 # Find in you account
-private_key = "0x25fa3c71a9dfd70575b331040087faf345acfdc2ff2ab4a1eae17af37ad70160"
+private_key = "0x4326a3d66b441dbdf3072f1ca64e2d34562dcda1d7d4f96f89dfbddf637bc4f0"
 
 # Compile and deploy contract
 with open("./PurchaseContract.sol", "r") as file:
@@ -113,12 +113,13 @@ async def add_asset(request: Request):
     price = data['price']
     category_id = data['category_id']
     owner_id = data['owner_id']
+    image = data['image']
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     cursor.execute(
-        "INSERT INTO DigitalAssets (AssetName, Description, Price, CategoryID, OwnerID) VALUES (%s, %s, %s, %s, %s);",
-        (asset_name, description, price, category_id, owner_id)
+        "INSERT INTO DigitalAssets (AssetName, Description, Price, CategoryID, OwnerID, Image) VALUES (%s, %s, %s, %s, %s, %s);",
+        (asset_name, description, price, category_id, owner_id, image)
     )
     connection.commit()
     cursor.close()
@@ -144,12 +145,14 @@ async def update_asset(request: Request, asset_id: int):
     asset_name = data['asset_name']
     description = data['description']
     price = data['price']
+    image = data['image']
+
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     cursor.execute(
-        "UPDATE DigitalAssets SET AssetName = %s, Description = %s, Price = %s WHERE AssetID = %s;",
-        (asset_name, description, price, asset_id)
+        "UPDATE DigitalAssets SET AssetName = %s, Description = %s, Price = %s, Image = %s WHERE AssetID = %s;",
+        (asset_name, description, price, image, asset_id)
     )
     connection.commit()
     cursor.close()
