@@ -5,6 +5,8 @@ from solcx import compile_standard, install_solc
 import json
 import os
 from web3 import Web3
+import random
+import time
 
 app = FastAPI()
 
@@ -33,9 +35,9 @@ w3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
 chain_id = 1337
 
 # Find in you account
-my_address = "0x2aC3a79dc3Bf4Ff10FD3506c97948Be3396f6dE7"
+my_address = "0x40D9486Ac7e105d6467FD274F370fc728a10100E"
 # Find in you account
-private_key = "0x4326a3d66b441dbdf3072f1ca64e2d34562dcda1d7d4f96f89dfbddf637bc4f0"
+private_key = "0xa288f63d5e3e1faebbc8c33a3ad36ef4ed05ca739ede6cd860cd1962b6e85bab"
 
 # Compile and deploy contract
 with open("./PurchaseContract.sol", "r") as file:
@@ -108,12 +110,13 @@ async def login(request: Request):
 @app.post("/add_asset/")
 async def add_asset(request: Request):
     data = await request.json()
-    asset_name = data['asset_name']
+    print(data)
+    asset_name = data['assetName']
     description = data['description']
     price = data['price']
     category_id = data['category_id']
     owner_id = data['owner_id']
-    image = data['image']
+    image = data['imageUrl']
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
@@ -172,13 +175,10 @@ async def delete_asset(asset_id: int):
 @app.post("/make_transaction/")
 async def make_transaction(request: Request):
     data = await request.json()
-    buyer_id = data['buyer_id']
+    buyer_id = data['owner_id']
     asset_id = data['asset_id']
-    item_name = data['item_name']
-    item_price = data['item_price']
-    purchase_time = data['purchase_time']
-    purchase_id = data['purchase_id'] # Ensure this is unique for each transaction
 
+    print(f'{buyer_id} - {asset_id}')
     # Database operations
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
@@ -189,6 +189,18 @@ async def make_transaction(request: Request):
     user_name = user[1]
 
     user_email = user[2]
+
+    cursor.execute("SELECT * FROM digitalassets WHERE AssetID = %s", (asset_id,))
+
+    asset = cursor.fetchone()
+    item_name = asset[1]
+    item_price = int(asset[3])
+
+    # #randomly generate purchase id
+    purchase_id = random.randint(1, 1000000)
+
+    # get purchase time
+    purchase_time = 1677538493
 
 
     PurchaseContract = w3.eth.contract(abi=abi, bytecode=bytecode)
