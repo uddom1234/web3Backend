@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import mysql.connector
 from solcx import compile_standard, install_solc
 import json
@@ -33,9 +34,9 @@ w3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
 chain_id = 1337
 
 # Find in you account
-my_address = "0x3439D770ba2EE1dA776262334B3Ef102881D5DD9"
+my_address = "0x21336AfE6f82168Da5f4fff7890b83cB28bb3089"
 # Find in you account
-private_key = "0xd3b60b7e3c4ae3fec55cb0d91a7772537fddef9e4203a7bf427c7dadccb7e3c0"
+private_key = "0x3e91ddd9820e8860d35767f93eb0f0b8e04c76aa9203806c4ac6f988c7be73d0"
 
 # Compile and deploy contract
 with open("./PurchaseContract.sol", "r") as file:
@@ -68,17 +69,30 @@ async def register_user(request: Request):
     username = data['username']
     email = data['email']
     password = data['password']
+    age = data['age']
+    gender = data['gender']
+
+    # Check for password length on the server side as well
+    if len(password) < 8:
+        return JSONResponse(status_code=400, content={"detail": "Password must be at least 8 characters long."})
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
         cursor.execute(
-            "INSERT INTO Users (Username, Email, Password) VALUES (%s, %s, %s);",
-            (username, email, password)
+            "INSERT INTO Users (Username, Email, Password, Age, Gender) VALUES (%s, %s, %s, %s, %s);",
+            (username, email, password, age, gender)
         )
         connection.commit()
-    except mysql.connector.IntegrityError:
-        raise HTTPException(status_code=400, detail="Username or email already registered")
+    except mysql.connector.IntegrityError as e:
+        error_code = e.args[0]
+        if error_code == mysql.connector.errorcode.ER_DUP_ENTRY:
+            # Determine if the duplicate entry is on the 'email' or 'username' field
+            if "email" in str(e.args[1]).lower():
+                return JSONResponse(status_code=400, content={"email": "Email is already registered."})
+            elif "username" in str(e.args[1]).lower():
+                return JSONResponse(status_code=400, content={"username": "Username is already taken."})
+        raise HTTPException(status_code=400, detail="Bad request")
     finally:
         cursor.close()
         connection.close()
@@ -103,7 +117,7 @@ async def login(request: Request):
     if user:
         return {"message": "Login successful", "success": True}
     else:
-        raise HTTPException(status_code=400, detail="Invalid credentials")
+        return JSONResponse(status_code=400, content={"detail": "Invalid email or password."})
 
 @app.post("/add_asset/")
 async def add_asset(request: Request):
@@ -113,12 +127,13 @@ async def add_asset(request: Request):
     price = data['price']
     category_id = data['category_id']
     owner_id = data['owner_id']
+    image = data['image']
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     cursor.execute(
-        "INSERT INTO DigitalAssets (AssetName, Description, Price, CategoryID, OwnerID) VALUES (%s, %s, %s, %s, %s);",
-        (asset_name, description, price, category_id, owner_id)
+        "INSERT INTO DigitalAssets (AssetName, Description, Price, CategoryID, OwnerID, Image) VALUES (%s, %s, %s, %s, %s, %s);",
+        (asset_name, description, price, category_id, owner_id, image)
     )
     connection.commit()
     cursor.close()
@@ -144,12 +159,14 @@ async def update_asset(request: Request, asset_id: int):
     asset_name = data['asset_name']
     description = data['description']
     price = data['price']
+    image = data['image']
+
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     cursor.execute(
-        "UPDATE DigitalAssets SET AssetName = %s, Description = %s, Price = %s WHERE AssetID = %s;",
-        (asset_name, description, price, asset_id)
+        "UPDATE DigitalAssets SET AssetName = %s, Description = %s, Price = %s, Image = %s WHERE AssetID = %s;",
+        (asset_name, description, price, image, asset_id)
     )
     connection.commit()
     cursor.close()
