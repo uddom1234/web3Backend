@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import mysql.connector
 from solcx import compile_standard, install_solc
 import json
@@ -35,9 +36,9 @@ w3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
 chain_id = 1337
 
 # Find in you account
-my_address = "0x40D9486Ac7e105d6467FD274F370fc728a10100E"
+my_address = "0x0FED631625a815f35Cb33Cc765BaF3515AA12935"
 # Find in you account
-private_key = "0xa288f63d5e3e1faebbc8c33a3ad36ef4ed05ca739ede6cd860cd1962b6e85bab"
+private_key = "0x78d5174ab5ac8890ada74696e115e1a74ea98100364d369fe596d961e1ebbfb5"
 
 # Compile and deploy contract
 with open("./PurchaseContract.sol", "r") as file:
@@ -70,47 +71,62 @@ async def register_user(request: Request):
     username = data['username']
     email = data['email']
     password = data['password']
+    age = data['age']
+    gender = data['gender']
+
+    # Check for password length on the server side as well
+    if len(password) < 8:
+        return JSONResponse(status_code=400, content={"detail": "Password must be at least 8 characters long."})
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
         cursor.execute(
-            "INSERT INTO Users (Username, Email, Password) VALUES (%s, %s, %s);",
-            (username, email, password)
+            "INSERT INTO Users (Username, Email, Password, Age, Gender) VALUES (%s, %s, %s, %s, %s);",
+            (username, email, password, age, gender)
         )
         connection.commit()
-    except mysql.connector.IntegrityError:
-        raise HTTPException(status_code=400, detail="Username or email already registered")
+        cursor.execute("SELECT LAST_INSERT_ID();")
+        userid = cursor.fetchone()[0]
+        print(userid)
+    except mysql.connector.IntegrityError as e:
+        error_code = e.args[0]
+        if error_code == mysql.connector.errorcode.ER_DUP_ENTRY:
+            # Determine if the duplicate entry is on the 'email' or 'username' field
+            if "email" in str(e.args[1]).lower():
+                return JSONResponse(status_code=400, content={"email": "Email is already registered."})
+            elif "username" in str(e.args[1]).lower():
+                return JSONResponse(status_code=400, content={"username": "Username is already taken."})
+        raise HTTPException(status_code=400, detail="Bad request")
     finally:
         cursor.close()
         connection.close()
-    return {"message": "User registered successfully"}
+    return {"message": "User registered successfully", "userId": userid}
 
 @app.post("/login/")
 async def login(request: Request):
     data = await request.json()
-    username = data['username']
+    email = data['email']
     password = data['password']
 
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     cursor.execute(
-        "SELECT * FROM Users WHERE Username = %s AND Password = %s;",
-        (username, password)
+        "SELECT * FROM Users WHERE email = %s AND Password = %s;",
+        (email, password)
     )
     user = cursor.fetchone()
     cursor.close()
     connection.close()
 
     if user:
-        return {"message": "Login successful", "success": true}
+        return {"message": "Login successful", "success": True, "userData": user}
     else:
-        raise HTTPException(status_code=400, detail="Invalid credentials")
+        return JSONResponse(status_code=400, content={"detail": "Invalid email or password."})
 
 @app.post("/add_asset/")
 async def add_asset(request: Request):
     data = await request.json()
-    print(data)
     asset_name = data['assetName']
     description = data['description']
     price = data['price']
@@ -122,7 +138,7 @@ async def add_asset(request: Request):
     cursor = connection.cursor()
     cursor.execute(
         "INSERT INTO DigitalAssets (AssetName, Description, Price, CategoryID, OwnerID, Image) VALUES (%s, %s, %s, %s, %s, %s);",
-        (asset_name, description, price, category_id, owner_id, image)
+        (asset_name, description, price, category_id, 42, image)
     )
     connection.commit()
     cursor.close()
@@ -174,11 +190,11 @@ async def delete_asset(asset_id: int):
 
 @app.post("/make_transaction/")
 async def make_transaction(request: Request):
+    print('hello')
     data = await request.json()
     buyer_id = data['owner_id']
     asset_id = data['asset_id']
 
-    print(f'{buyer_id} - {asset_id}')
     # Database operations
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
@@ -200,7 +216,7 @@ async def make_transaction(request: Request):
     purchase_id = random.randint(1, 1000000)
 
     # get purchase time
-    purchase_time = 1677538493
+    purchase_time = int(time.time())
 
 
     PurchaseContract = w3.eth.contract(abi=abi, bytecode=bytecode)
